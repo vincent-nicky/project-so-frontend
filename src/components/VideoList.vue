@@ -12,7 +12,7 @@
               <img :src="item.pic" referrerpolicy="no-referrer" />
             </template>
             <a :href="item.arcurl">
-              <a-card-meta :title="item.author" />
+              <a-card-meta :title="item.title" />
             </a>
           </a-card>
         </a>
