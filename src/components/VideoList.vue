@@ -2,16 +2,18 @@
   <a-list
     item-layout="horizontal"
     :grid="{ gutter: 16, xs: 1, sm: 2, md: 4, lg: 4, xl: 6, xxl: 3 }"
-    :data-source="props.pictureList"
+    :data-source="props.videoList"
   >
     <template #renderItem="{ item }">
       <a-list-item>
-        <a :href="item.url">
+        <a :href="item.arcurl">
           <a-card>
             <template #cover>
-              <img :src="item.url" referrerpolicy="no-referrer" />
+              <img :src="item.pic" referrerpolicy="no-referrer" />
             </template>
-            <a :href="item.url"><a-card-meta :title="item.title" /></a>
+            <a :href="item.arcurl">
+              <a-card-meta :title="item.author" />
+            </a>
           </a-card>
         </a>
       </a-list-item>
@@ -23,11 +25,11 @@
 import { withDefaults, defineProps } from "vue";
 
 interface Props {
-  pictureList: any[];
+  videoList: any[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  pictureList: () => [],
+  videoList: () => [],
 });
 </script>
 

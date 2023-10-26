@@ -18,12 +18,15 @@
       <a-tab-pane key="user" tab="用户">
         <UserList :user-list="userList" />
       </a-tab-pane>
+      <a-tab-pane key="video" tab="视频">
+        <VideoList :video-list="videoList"></VideoList>
+      </a-tab-pane>
     </a-tabs>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watchEffect } from "vue";
+import { onMounted, ref, watchEffect } from "vue";
 import PostList from "@/components/PostList.vue";
 import PictureList from "@/components/PictureList.vue";
 import UserList from "@/components/UserList.vue";
@@ -31,6 +34,7 @@ import MyDivider from "@/components/MyDivider.vue";
 import { useRoute, useRouter } from "vue-router";
 import myAxios from "@/plugins/myAxios";
 import { message } from "ant-design-vue";
+import VideoList from "@/components/VideoList.vue";
 
 const postList = ref([]);
 
@@ -38,114 +42,116 @@ const userList = ref([]);
 
 const pictureList = ref([]);
 
+const videoList = ref([]);
+
 const route = useRoute();
 const router = useRouter();
 const activeKey = route.params.category;
 
 const initSearchParams = {
-  type: activeKey,
   text: "",
-  pageSize: 10,
+  pageSize: 50,
   pageNum: 1,
 };
 
+let tabKey = route.params.category || "post";
 const searchText = ref(route.query.text || "");
 
 /**
- * 加载数据
- * @param params
- */
-const loadDataOld = (params: any) => {
-  const postQuery = {
-    ...params,
-    searchText: params.text,
-  };
-  myAxios.post("post/list/page/vo", postQuery).then((res: any) => {
-    postList.value = res.records;
-  });
-
-  const userQuery = {
-    ...params,
-    userName: params.text,
-  };
-  myAxios.post("user/list/page/vo", userQuery).then((res: any) => {
-    userList.value = res.records;
-  });
-
-  const pictureQuery = {
-    ...params,
-    searchText: params.text,
-  };
-  myAxios.post("picture/list/page/vo", pictureQuery).then((res: any) => {
-    pictureList.value = res.records;
-  });
-};
-
-/**
- * 加载聚合数据
+ * 加载聚合数据（所有数据）
  * @param params
  */
 const loadAllData = (params: any) => {
   const query = {
     ...params,
-    searchText: params.text,
+    searchText: searchText,
   };
-  myAxios.post("search/all", query).then((res: any) => {
-    postList.value = res.postList;
-    userList.value = res.userList;
-    pictureList.value = res.pictureList;
-  });
+  if (params.text == null) {
+    message.info("开启愉快的搜索吧！");
+  } else {
+    myAxios.post("search/all", query).then((res: any) => {
+      postList.value = res.postList;
+      userList.value = res.userList;
+      pictureList.value = res.pictureList;
+      videoList.value = res.videoList;
+    });
+  }
 };
 
 /**
  * 加载单类数据
  * @param params
+ * @param type
  */
 const loadData = (params: any) => {
-  const { type = "post" } = params;
-  if (!type) {
+  if (!tabKey) {
     message.error("类别为空");
     return;
   }
   const query = {
     ...params,
+    type: tabKey,
     searchText: params.text,
   };
-  myAxios.post("search/all", query).then((res: any) => {
-    if (type === "post") {
-      postList.value = res.dataList;
-    } else if (type === "user") {
-      userList.value = res.dataList;
-    } else if (type === "picture") {
-      pictureList.value = res.dataList;
-    }
-  });
+  if (params.text != null) {
+    message.loading("搜索中", 1);
+    myAxios.post("search/all", query).then((res: any) => {
+      if (tabKey === "post") {
+        postList.value = res.dataList;
+      } else if (tabKey === "user") {
+        userList.value = res.dataList;
+      } else if (tabKey === "picture") {
+        pictureList.value = res.dataList;
+      } else if (tabKey === "video") {
+        videoList.value = res.dataList;
+      }
+    });
+  } else {
+    message.info("输入内容，开启愉快的搜索吧！");
+  }
 };
 
 const searchParams = ref(initSearchParams);
 
-watchEffect(() => {
+// 从url中加载数据
+onMounted(() => {
   searchParams.value = {
-    ...initSearchParams,
+    pageSize: route.query.pageSize,
+    pageNum: route.query.pageNum,
     text: route.query.text,
-    type: route.params.category,
   } as any;
   loadData(searchParams.value);
 });
 
 const onSearch = (value: string) => {
-  router.push({
-    query: {
-      ...searchParams.value,
+  if (value != searchParams.value.text) {
+    router.push({
+      path: `/${tabKey}`,
+      query: {
+        ...searchParams.value,
+        text: value,
+      },
+    });
+    searchParams.value = {
+      ...initSearchParams,
       text: value,
-    },
-  });
+    } as any;
+    loadData(searchParams.value);
+  } else {
+    return;
+  }
 };
 
 const onTabChange = (key: string) => {
+  tabKey = key;
+  searchParams.value = {
+    ...initSearchParams,
+    text: searchText.value,
+  } as any;
   router.push({
-    path: `/${key}`,
+    path: `/${tabKey}`,
     query: searchParams.value,
   });
+  loadData(searchParams.value);
 };
 </script>
